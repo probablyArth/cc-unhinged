@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/your-demo-video.mp4
 Plays sounds when your Claude Code session crosses token thresholds:
 
 - **5K tokens** 😬 → *fahhh* (warning)
-- **15K tokens** 😰 → *FAHHH* (high alert)  
+- **15K tokens** 😰 → *FAHHH* (high alert)
 - **30K tokens** 💀 → ***FAHHHHHH*** (critical)
 
 Perfect for:
@@ -43,32 +43,73 @@ go build -o bin/cc-unhinged .
 
 ---
 
-## 🎵 Custom Sounds
+## 🎵 Soundpacks
 
-Want different sounds? Drop your audio files anywhere and configure:
+Soundpacks are bundled sound sets in `sounds/<pack>/`. Each pack has three files: `warning.*`, `high.*`, `critical.*`.
 
-```bash
-mkdir -p ~/.cc-unhinged
-cat > ~/.cc-unhinged/config.json << 'EOF'
+**Bundled packs:**
+
+| Pack | Vibe |
+|------|------|
+| `fahhh` | Escalating "fahhh" — the default existential dread |
+
+**Select a pack** in `~/.cc-unhinged/config.json`:
+
+```json
 {
+  "soundpack": "fahhh"
+}
+```
+
+Or via environment variable: `CLAUDE_TOKEN_SOUNDPACK=fahhh`
+
+**Add your own pack** — just create a new directory under `sounds/`:
+
+```
+sounds/
+  fahhh/          ← bundled
+    warning.wav
+    high.wav
+    critical.wav
+  airhorn/        ← your custom pack
+    warning.wav
+    high.wav
+    critical.wav
+```
+
+**Per-sound overrides** in `sounds.*` still take priority over the soundpack — mix and match as you please.
+
+---
+
+## 🎛️ Custom Configuration
+
+Create `~/.cc-unhinged/config.json`:
+
+```json
+{
+  "soundpack": "fahhh",
   "thresholds": {
     "warning": 5000,
     "high": 15000,
     "critical": 30000
   },
   "sounds": {
-    "warning": "/path/to/gentle-chime.wav",
-    "high": "/path/to/alert.wav",
-    "critical": "/path/to/airhorn.wav"
-  }
+    "warning": "/path/to/override.wav",
+    "high": "/path/to/override.wav",
+    "critical": "/path/to/override.wav"
+  },
+  "player": "afplay",
+  "debug": false
 }
-EOF
 ```
 
-**Pro tips:**
-- Use airhorn.wav for critical (recommended)
-- Use Windows XP error sound for nostalgia
-- Use silence.wav to suffer in quiet desperation
+All fields are optional — omit any to use defaults.
+
+Sound resolution order (highest wins):
+1. **Environment variables** — per-session overrides
+2. **Per-sound config** — `sounds.*` in config file
+3. **Soundpack** — `soundpack` in config file
+4. **OS system sounds** — Tink/Glass/Sosumi on macOS, freedesktop on Linux
 
 ---
 
@@ -142,6 +183,7 @@ Override thresholds and sounds per-session:
 | `CLAUDE_TOKEN_WARNING` | `5000` | Warning threshold |
 | `CLAUDE_TOKEN_HIGH` | `15000` | High threshold |
 | `CLAUDE_TOKEN_CRITICAL` | `30000` | Critical threshold |
+| `CLAUDE_TOKEN_SOUNDPACK` | none | Name of bundled soundpack |
 | `CLAUDE_TOKEN_SOUND_WARNING` | system | Path to warning sound |
 | `CLAUDE_TOKEN_SOUND_HIGH` | system | Path to high sound |
 | `CLAUDE_TOKEN_SOUND_CRITICAL` | system | Path to critical sound |

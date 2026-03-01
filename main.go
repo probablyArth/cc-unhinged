@@ -47,6 +47,7 @@ type usageData struct {
 type configFile struct {
 	Thresholds map[string]int    `json:"thresholds"`
 	Sounds     map[string]string `json:"sounds"`
+	Soundpack  string            `json:"soundpack"`
 	Player     string            `json:"player"`
 	Debug      bool              `json:"debug"`
 }
@@ -84,6 +85,48 @@ func defaultPlayer() string {
 		return "afplay"
 	}
 	return "paplay"
+}
+
+// pluginRoot returns the root directory of the plugin/repo.
+// Checks CLAUDE_PLUGIN_ROOT first, then derives from binary location.
+func pluginRoot() string {
+	if root := os.Getenv("CLAUDE_PLUGIN_ROOT"); root != "" {
+		return root
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	exe, err = filepath.EvalSymlinks(exe)
+	if err != nil {
+		return ""
+	}
+	// binary is at <root>/bin/cc-unhinged → parent of parent
+	return filepath.Dir(filepath.Dir(exe))
+}
+
+// soundpackSounds resolves sound file paths for a named soundpack.
+// Looks for sounds/<packName>/{warning,high,critical}.* in the plugin root.
+func soundpackSounds(packName string) map[string]string {
+	root := pluginRoot()
+	if root == "" {
+		return nil
+	}
+	packDir := filepath.Join(root, "sounds", packName)
+	if info, err := os.Stat(packDir); err != nil || !info.IsDir() {
+		return nil
+	}
+	result := map[string]string{}
+	for _, level := range []string{"warning", "high", "critical"} {
+		matches, err := filepath.Glob(filepath.Join(packDir, level+".*"))
+		if err == nil && len(matches) > 0 {
+			result[level] = matches[0]
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func loadConfigFile() configFile {
@@ -168,7 +211,20 @@ func loadConfig() config {
 	if cfg.Sounds == nil {
 		cfg.Sounds = map[string]string{}
 	}
+
+	// Sound resolution: env vars → per-sound config → soundpack → OS defaults
 	ds := defaultSounds()
+	packName := resolveString("CLAUDE_TOKEN_SOUNDPACK", cfg.Soundpack, "")
+	if packName != "" {
+		if ps := soundpackSounds(packName); ps != nil {
+			// Soundpack fills in as fallback before OS defaults
+			for _, level := range []string{"warning", "high", "critical"} {
+				if v, ok := ps[level]; ok {
+					ds[level] = v
+				}
+			}
+		}
+	}
 
 	debug := cfg.Debug
 	if v, ok := os.LookupEnv("CLAUDE_TOKEN_DEBUG"); ok && v != "" && v != "0" && v != "false" {
