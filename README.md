@@ -1,40 +1,167 @@
-# cc-unhinged
+# cc-unhinged 🔥
 
-A Claude Code hook that plays escalating sound alerts when token usage crosses configurable thresholds during a prompt.
+> **Your Claude Code token burn? Now with sound effects.**
 
-## How it works
+Ever watch your token count climb and feel that rising panic? This plugin **sonifies your existential dread** with escalating sound alerts as Claude devours your context budget.
 
-Two hooks work together:
+Three thresholds. Three levels of *"fahhh"*. Pure chaos.
 
-1. **`UserPromptSubmit`** (sync) — snapshots the current token count as a baseline before Claude starts processing
-2. **`PostToolUse` / `SubagentStop` / `Stop`** (async) — recalculates total tokens, checks if any thresholds were crossed since the baseline, plays the highest newly-crossed alert sound
+https://github.com/user-attachments/assets/your-demo-video.mp4
+
+---
+
+## 🎯 What it does
+
+Plays sounds when your Claude Code session crosses token thresholds:
+
+- **5K tokens** 😬 → *fahhh* (warning)
+- **15K tokens** 😰 → *FAHHH* (high alert)  
+- **30K tokens** 💀 → ***FAHHHHHH*** (critical)
+
+Perfect for:
+- Audibly tracking when you asked Claude to "refactor the entire codebase real quick"
+- Knowing when to stop before bankruptcy
+- Scaring your coworkers
+
+---
+
+## ⚡ Quick Start
+
+**1. Clone & build:**
+```bash
+git clone https://github.com/probablyArth/cc-unhinged.git
+cd cc-unhinged
+go build -o bin/cc-unhinged .
+```
+
+**2. Install in Claude Code:**
+```
+/plugins → Add local plugin → /path/to/cc-unhinged
+```
+
+**3. Burn tokens. Hear sounds. Regret everything.**
+
+---
+
+## 🎵 Custom Sounds
+
+Want different sounds? Drop your audio files anywhere and configure:
+
+```bash
+mkdir -p ~/.cc-unhinged
+cat > ~/.cc-unhinged/config.json << 'EOF'
+{
+  "thresholds": {
+    "warning": 5000,
+    "high": 15000,
+    "critical": 30000
+  },
+  "sounds": {
+    "warning": "/path/to/gentle-chime.wav",
+    "high": "/path/to/alert.wav",
+    "critical": "/path/to/airhorn.wav"
+  }
+}
+EOF
+```
+
+**Pro tips:**
+- Use airhorn.wav for critical (recommended)
+- Use Windows XP error sound for nostalgia
+- Use silence.wav to suffer in quiet desperation
+
+---
+
+## 🔧 How It Works
+
+Two hooks track your token usage:
+
+1. **`UserPromptSubmit`** (sync) — snapshots baseline before Claude starts
+2. **`PostToolUse` / `SubagentStop` / `Stop`** (async) — checks if any thresholds were crossed, plays the highest sound
 
 ```
-UserPromptSubmit → snapshot baseline (e.g. 4000 tokens)
+UserPromptSubmit → baseline = 4000 tokens
   ↓
-PostToolUse (Read)  → total=4200, no threshold crossed
-PostToolUse (Bash)  → total=5300, crosses warning → plays sound
-                      baseline advanced to 5300
+PostToolUse      → 4200 tokens (no threshold crossed)
+PostToolUse      → 5300 tokens → 🔊 plays warning sound
+                   baseline = 5300
   ↓
-Stop → total=5800, no NEW threshold crossed (baseline=5300)
+Stop             → 5800 tokens (no NEW threshold crossed)
   ↓
-next prompt...
-UserPromptSubmit → snapshot baseline (5800)
+Next prompt...
+UserPromptSubmit → baseline = 5800 (fresh cycle)
 ```
 
-Alerts only fire for thresholds crossed **during the current prompt**. The baseline advances after each alert to prevent duplicates within the same prompt, but resets on every new prompt.
+**Key feature:** Alerts only fire for thresholds crossed **during the current prompt**. No spam, just pure panic at the right moments.
 
-## Install
+---
 
-### Option A: Claude Code plugin
+## 🧪 Test Without Burning Tokens
 
+```bash
+# Simulate crossing warning threshold
+./bin/cc-unhinged --test 4000 5500
+
+# Simulate crossing high threshold
+./bin/cc-unhinged --test 6000 16000
+
+# Simulate crossing ALL thresholds (plays critical only)
+./bin/cc-unhinged --test 0 35000
+
+# No thresholds crossed (silent)
+./bin/cc-unhinged --test 4000 4800
 ```
-/plugins → Add local plugin → /path/to/claude-cc-unhinged
+
+---
+
+## 🐛 Debug Mode
+
+Turn on logging to see exactly what's happening:
+
+```json
+{
+  "debug": true
+}
 ```
 
-### Option B: Direct hook in settings
+Then watch the logs:
+```bash
+tail -f ~/.cc-unhinged/debug.log
+```
 
-Add to `~/.claude/settings.json`:
+---
+
+## ⚙️ Advanced Configuration
+
+### Environment Variables
+
+Override thresholds and sounds per-session:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAUDE_TOKEN_WARNING` | `5000` | Warning threshold |
+| `CLAUDE_TOKEN_HIGH` | `15000` | High threshold |
+| `CLAUDE_TOKEN_CRITICAL` | `30000` | Critical threshold |
+| `CLAUDE_TOKEN_SOUND_WARNING` | system | Path to warning sound |
+| `CLAUDE_TOKEN_SOUND_HIGH` | system | Path to high sound |
+| `CLAUDE_TOKEN_SOUND_CRITICAL` | system | Path to critical sound |
+| `CLAUDE_TOKEN_PLAYER` | `afplay`/`paplay` | Audio player binary |
+| `CLAUDE_TOKEN_DEBUG` | off | Set to `1` for debug logs |
+
+### Default System Sounds
+
+| Level | macOS | Linux |
+|-------|-------|-------|
+| warning | Tink.aiff | freedesktop/message.oga |
+| high | Glass.aiff | freedesktop/bell.oga |
+| critical | Sosumi.aiff | freedesktop/alarm-clock-elapsed.oga |
+
+### Manual Hook Installation
+
+Don't want to use `/plugins`? Add to `~/.claude/settings.json`:
+
+<details>
+<summary>Click to expand hook config</summary>
 
 ```json
 {
@@ -44,7 +171,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/path/to/claude-cc-unhinged/bin/cc-unhinged",
+            "command": "/path/to/cc-unhinged/bin/cc-unhinged",
             "timeout": 5
           }
         ]
@@ -55,7 +182,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/path/to/claude-cc-unhinged/bin/cc-unhinged",
+            "command": "/path/to/cc-unhinged/bin/cc-unhinged",
             "timeout": 5,
             "async": true
           }
@@ -67,7 +194,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/path/to/claude-cc-unhinged/bin/cc-unhinged",
+            "command": "/path/to/cc-unhinged/bin/cc-unhinged",
             "timeout": 5,
             "async": true
           }
@@ -79,7 +206,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/path/to/claude-cc-unhinged/bin/cc-unhinged",
+            "command": "/path/to/cc-unhinged/bin/cc-unhinged",
             "timeout": 5,
             "async": true
           }
@@ -90,97 +217,43 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-## Build
+</details>
 
-```
-go build -o bin/cc-unhinged .
-```
+---
 
-## Test
+## 📊 Token Counting
 
-Simulate threshold checks without burning tokens:
+Tokens are summed from `message.usage` in your session JSONL:
 
-```bash
-# ./bin/cc-unhinged --test <baseline> <total>
+- ✅ `input_tokens` — non-cached input per turn
+- ✅ `output_tokens` — generated tokens per turn
+- ❌ Cache tokens (`cache_creation_input_tokens`, `cache_read_input_tokens`) — not counted (they're optimization, not new work)
 
-# crosses warning (plays warning sound)
-./bin/cc-unhinged --test 4000 5500
+---
 
-# baseline past warning, crosses high (plays high sound)
-./bin/cc-unhinged --test 6000 16000
+## 🤝 Contributing
 
-# crosses nothing
-./bin/cc-unhinged --test 4000 4800
+PRs welcome! Especially for:
+- More cursed sound packs
+- Windows support testing
+- Better default sounds
+- Meme-worthy threshold presets
 
-# crosses all three (plays critical sound only)
-./bin/cc-unhinged --test 0 35000
-```
+---
 
-## Configuration
+## 📜 License
 
-Config is resolved in layers (highest precedence wins):
+MIT — use it, break it, make it worse.
 
-1. **Environment variables** — per-session overrides
-2. **`~/.cc-unhinged/config.json`** — persistent user config
-3. **Built-in defaults**
+---
 
-### Config file
+## ⭐ Star this repo if:
+- You've ever said "just a quick refactor" and burned 50K tokens
+- You want audible confirmation of your poor life choices
+- Sound effects make everything better
 
-Create `~/.cc-unhinged/config.json`:
+---
 
-```json
-{
-  "thresholds": {
-    "warning": 5000,
-    "high": 15000,
-    "critical": 30000
-  },
-  "sounds": {
-    "warning": "/path/to/gentle-chime.wav",
-    "high": "/path/to/alert.wav",
-    "critical": "/path/to/airhorn.wav"
-  },
-  "player": "afplay",
-  "debug": false
-}
-```
+**Made with ~~regret~~ love by [@probablyArth](https://github.com/probablyArth)**
 
-All fields are optional — omit any to use defaults.
-
-### Debug logging
-
-Set `"debug": true` in the config file (or `CLAUDE_TOKEN_DEBUG=1`) to write detailed logs:
-
-```bash
-tail -f ~/.cc-unhinged/debug.log
-```
-
-### Environment variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `CLAUDE_TOKEN_WARNING` | `5000` | Warning threshold (tokens) |
-| `CLAUDE_TOKEN_HIGH` | `15000` | High threshold (tokens) |
-| `CLAUDE_TOKEN_CRITICAL` | `30000` | Critical threshold (tokens) |
-| `CLAUDE_TOKEN_SOUND_WARNING` | system sound | Path to warning sound file |
-| `CLAUDE_TOKEN_SOUND_HIGH` | system sound | Path to high sound file |
-| `CLAUDE_TOKEN_SOUND_CRITICAL` | system sound | Path to critical sound file |
-| `CLAUDE_TOKEN_PLAYER` | `afplay` / `paplay` | Audio player binary |
-| `CLAUDE_TOKEN_DEBUG` | off | Set to `1` to enable debug logging |
-
-### Default sounds
-
-| Level | macOS | Linux |
-|---|---|---|
-| warning | Tink.aiff | freedesktop/message.oga |
-| high | Glass.aiff | freedesktop/bell.oga |
-| critical | Sosumi.aiff | freedesktop/alarm-clock-elapsed.oga |
-
-## Token counting
-
-Tokens are summed from `message.usage` on `type: "assistant"` entries in the session JSONL:
-
-- `input_tokens` — non-cached input tokens per turn
-- `output_tokens` — generated tokens per turn
-
-Cache tokens (`cache_creation_input_tokens`, `cache_read_input_tokens`) are **not** counted — they represent context caching mechanics, not new work.
+*Now go forth and sonify your token burns.* 🔥
