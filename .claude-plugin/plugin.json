@@ -1,0 +1,7 @@
+{
+  "name": "cc-unhinged",
+  "description": "Plays escalating sound alerts when cumulative token usage in a session crosses configurable thresholds (5K/15K/30K). Uses stateless recalculation from the session transcript for accuracy.",
+  "author": {
+    "name": "cc-unhinged"
+  }
+}
